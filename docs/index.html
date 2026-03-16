@@ -1,0 +1,1377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TicketChain — Stellar Ticket Booking</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0f;
+      --bg2: #111118;
+      --bg3: #16161f;
+      --border: rgba(255,255,255,0.07);
+      --border-hover: rgba(255,255,255,0.15);
+      --accent: #c8f03e;
+      --accent2: #7b5ea7;
+      --accent3: #3ecff0;
+      --text: #f0ede8;
+      --text2: #8a8896;
+      --text3: #555466;
+      --danger: #f03e6a;
+      --success: #3ef0a0;
+      --card-radius: 16px;
+      --font-display: 'Syne', sans-serif;
+      --font-body: 'DM Sans', sans-serif;
+      --font-mono: 'DM Mono', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.6;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Grid noise overlay ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(200,240,62,0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(200,240,62,0.015) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Nav ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 40px;
+      height: 64px;
+      background: rgba(10,10,15,0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .logo-dot {
+      width: 8px; height: 8px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(200,240,62,0.4); }
+      50% { box-shadow: 0 0 0 8px rgba(200,240,62,0); }
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 4px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--text2);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 6px 14px;
+      border-radius: 8px;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .nav-links a:hover, .nav-links a.active {
+      color: var(--text);
+      background: var(--bg3);
+    }
+
+    .nav-cta {
+      background: var(--accent) !important;
+      color: var(--bg) !important;
+      font-weight: 600 !important;
+      padding: 8px 18px !important;
+    }
+
+    .nav-cta:hover { opacity: 0.88; }
+
+    /* ── Sections ── */
+    section {
+      display: none;
+      min-height: 100vh;
+      padding: 100px 40px 60px;
+      position: relative;
+      z-index: 1;
+    }
+
+    section.active { display: block; }
+
+    .container { max-width: 1100px; margin: 0 auto; }
+
+    /* ── Hero ── */
+    .hero {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: center;
+      min-height: calc(100vh - 64px);
+      padding-top: 40px;
+    }
+
+    .hero-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--accent);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hero-eyebrow::before {
+      content: '';
+      width: 24px; height: 1px;
+      background: var(--accent);
+    }
+
+    h1 {
+      font-family: var(--font-display);
+      font-size: clamp(42px, 5vw, 72px);
+      font-weight: 800;
+      line-height: 1.0;
+      letter-spacing: -2px;
+      margin-bottom: 24px;
+    }
+
+    h1 .accent { color: var(--accent); }
+    h1 .dim { color: var(--text3); }
+
+    .hero-desc {
+      color: var(--text2);
+      font-size: 16px;
+      line-height: 1.7;
+      margin-bottom: 36px;
+      max-width: 440px;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-family: var(--font-body);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: var(--bg);
+      font-weight: 600;
+    }
+
+    .btn-primary:hover { opacity: 0.88; transform: translateY(-1px); }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border-hover);
+    }
+
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+    .btn-danger {
+      background: rgba(240,62,106,0.1);
+      color: var(--danger);
+      border: 1px solid rgba(240,62,106,0.2);
+    }
+
+    .btn-danger:hover { background: rgba(240,62,106,0.2); }
+
+    .btn-sm { padding: 8px 16px; font-size: 13px; }
+
+    /* ── Stats strip ── */
+    .stats-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: var(--card-radius);
+      overflow: hidden;
+      margin-top: 48px;
+    }
+
+    .stat {
+      background: var(--bg2);
+      padding: 24px;
+    }
+
+    .stat-val {
+      font-family: var(--font-display);
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: -1px;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--text3);
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 4px;
+    }
+
+    /* ── Hero visual ── */
+    .hero-visual {
+      position: relative;
+    }
+
+    .ticket-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .ticket-card-header {
+      background: linear-gradient(135deg, #1a1a28, #22223a);
+      padding: 28px;
+      border-bottom: 1px dashed var(--border-hover);
+      position: relative;
+    }
+
+    .ticket-card-header::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: radial-gradient(circle at 80% 20%, rgba(200,240,62,0.08), transparent 60%);
+    }
+
+    .ticket-event-name {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .ticket-venue {
+      font-size: 13px;
+      color: var(--text2);
+      font-family: var(--font-mono);
+    }
+
+    .ticket-badge {
+      position: absolute;
+      top: 20px; right: 20px;
+      background: rgba(200,240,62,0.15);
+      color: var(--accent);
+      font-size: 11px;
+      font-family: var(--font-mono);
+      font-weight: 500;
+      padding: 4px 10px;
+      border-radius: 20px;
+      border: 1px solid rgba(200,240,62,0.2);
+    }
+
+    .ticket-card-body {
+      padding: 20px 28px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+    }
+
+    .ticket-info-item { }
+
+    .ticket-info-label {
+      font-size: 10px;
+      color: var(--text3);
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+
+    .ticket-info-val {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .ticket-card-footer {
+      padding: 16px 28px;
+      background: var(--bg3);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid var(--border);
+    }
+
+    .ticket-id {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text3);
+    }
+
+    .ticket-qr {
+      width: 40px; height: 40px;
+      display: grid;
+      grid-template-columns: repeat(5,1fr);
+      gap: 2px;
+    }
+
+    .qr-dot {
+      background: var(--accent);
+      border-radius: 1px;
+      opacity: 0;
+      animation: qrReveal 0.05s ease forwards;
+    }
+
+    @keyframes qrReveal { to { opacity: 1; } }
+
+    /* ── Page titles ── */
+    .page-header {
+      margin-bottom: 40px;
+    }
+
+    .page-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--accent);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .page-title {
+      font-family: var(--font-display);
+      font-size: 36px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      margin-bottom: 8px;
+    }
+
+    .page-subtitle {
+      color: var(--text2);
+      font-size: 15px;
+    }
+
+    /* ── Cards grid ── */
+    .events-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px;
+      margin-top: 32px;
+    }
+
+    .event-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--card-radius);
+      overflow: hidden;
+      transition: border-color 0.2s, transform 0.2s;
+      cursor: pointer;
+    }
+
+    .event-card:hover {
+      border-color: var(--border-hover);
+      transform: translateY(-2px);
+    }
+
+    .event-card-accent {
+      height: 4px;
+      background: linear-gradient(90deg, var(--accent), var(--accent3));
+    }
+
+    .event-card-body { padding: 24px; }
+
+    .event-card-tags {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    .tag {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      font-weight: 500;
+      padding: 3px 9px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .tag-active { background: rgba(62,240,160,0.1); color: var(--success); border: 1px solid rgba(62,240,160,0.2); }
+    .tag-sold { background: rgba(240,62,106,0.1); color: var(--danger); border: 1px solid rgba(240,62,106,0.2); }
+    .tag-network { background: rgba(200,240,62,0.08); color: var(--accent); border: 1px solid rgba(200,240,62,0.15); }
+
+    .event-card-name {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      line-height: 1.2;
+    }
+
+    .event-card-venue {
+      font-size: 13px;
+      color: var(--text2);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .event-card-meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    .meta-item { }
+
+    .meta-label {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 2px;
+    }
+
+    .meta-val {
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .meta-val.price { color: var(--accent); }
+
+    .event-card-footer {
+      padding: 16px 24px;
+      background: var(--bg3);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .seats-bar {
+      flex: 1;
+      height: 4px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-right: 12px;
+    }
+
+    .seats-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+      transition: width 0.5s ease;
+    }
+
+    .seats-text {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text2);
+      white-space: nowrap;
+    }
+
+    /* ── Forms ── */
+    .form-section {
+      max-width: 600px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .form-grid .full { grid-column: 1 / -1; }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 12px;
+      font-family: var(--font-mono);
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    input, textarea, select {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 14px;
+      padding: 12px 16px;
+      outline: none;
+      transition: border-color 0.2s;
+      width: 100%;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--accent);
+    }
+
+    input::placeholder { color: var(--text3); }
+
+    select option { background: var(--bg2); }
+
+    .field-hint {
+      font-size: 11px;
+      color: var(--text3);
+      font-family: var(--font-mono);
+    }
+
+    /* ── Toast ── */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .toast {
+      background: var(--bg2);
+      border: 1px solid var(--border-hover);
+      border-radius: 12px;
+      padding: 14px 18px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 280px;
+      animation: slideIn 0.3s ease;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    .toast.success { border-color: rgba(62,240,160,0.3); }
+    .toast.error { border-color: rgba(240,62,106,0.3); }
+
+    .toast-icon {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+
+    .toast.success .toast-icon { background: rgba(62,240,160,0.15); color: var(--success); }
+    .toast.error .toast-icon { background: rgba(240,62,106,0.15); color: var(--danger); }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(8px);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .modal {
+      background: var(--bg2);
+      border: 1px solid var(--border-hover);
+      border-radius: 20px;
+      padding: 36px;
+      width: 90%;
+      max-width: 480px;
+      transform: translateY(20px);
+      transition: transform 0.2s;
+    }
+
+    .modal-overlay.open .modal { transform: translateY(0); }
+
+    .modal-title {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .modal-sub {
+      color: var(--text2);
+      font-size: 13px;
+      margin-bottom: 24px;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 24px;
+    }
+
+    /* ── My tickets ── */
+    .tickets-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-top: 24px;
+    }
+
+    .my-ticket {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--card-radius);
+      display: grid;
+      grid-template-columns: 4px 1fr auto;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+
+    .my-ticket:hover { border-color: var(--border-hover); }
+
+    .my-ticket-stripe { background: linear-gradient(180deg, var(--accent), var(--accent3)); }
+
+    .my-ticket-body { padding: 20px 24px; }
+
+    .my-ticket-event {
+      font-family: var(--font-display);
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .my-ticket-meta {
+      font-size: 12px;
+      color: var(--text2);
+      font-family: var(--font-mono);
+      display: flex;
+      gap: 16px;
+    }
+
+    .my-ticket-actions {
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-left: 1px solid var(--border);
+    }
+
+    /* ── Status chip ── */
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      font-weight: 500;
+    }
+
+    .chip::before {
+      content: '';
+      width: 5px; height: 5px;
+      border-radius: 50%;
+    }
+
+    .chip-active { background: rgba(62,240,160,0.1); color: var(--success); }
+    .chip-active::before { background: var(--success); }
+    .chip-used { background: rgba(255,255,255,0.05); color: var(--text3); }
+    .chip-used::before { background: var(--text3); }
+
+    /* ── Contract info bar ── */
+    .contract-bar {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 32px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+    }
+
+    .contract-bar-label {
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      white-space: nowrap;
+    }
+
+    .contract-bar-id {
+      color: var(--accent);
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .contract-bar-net {
+      color: var(--text2);
+      border-left: 1px solid var(--border);
+      padding-left: 14px;
+    }
+
+    /* ── Empty state ── */
+    .empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text3);
+    }
+
+    .empty-icon {
+      font-size: 40px;
+      margin-bottom: 12px;
+      opacity: 0.4;
+    }
+
+    .empty-title {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text2);
+      margin-bottom: 6px;
+    }
+
+    /* ── Divider ── */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 32px 0;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 3px; }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      nav { padding: 0 20px; }
+      section { padding: 90px 20px 40px; }
+      .hero { grid-template-columns: 1fr; gap: 40px; }
+      .hero-visual { display: none; }
+      .form-grid { grid-template-columns: 1fr; }
+      .stats-strip { grid-template-columns: 1fr; }
+      .my-ticket { grid-template-columns: 4px 1fr; }
+      .my-ticket-actions { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    TicketChain
+  </div>
+  <ul class="nav-links">
+    <li><a onclick="showSection('home')" class="active" id="nav-home">Home</a></li>
+    <li><a onclick="showSection('events')" id="nav-events">Events</a></li>
+    <li><a onclick="showSection('create')" id="nav-create">Create Event</a></li>
+    <li><a onclick="showSection('tickets')" id="nav-tickets">My Tickets</a></li>
+    <li><a onclick="showSection('validate')" class="nav-cta" id="nav-validate">Validate</a></li>
+  </ul>
+</nav>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Book Modal -->
+<div class="modal-overlay" id="bookModal">
+  <div class="modal">
+    <div class="modal-title" id="modalEventName">Book Ticket</div>
+    <div class="modal-sub" id="modalEventSub">Confirm your seat reservation on Stellar</div>
+    <div class="field" style="margin-top:16px">
+      <label>Your Stellar Wallet Address</label>
+      <input type="text" id="buyerAddress" placeholder="G... (56 characters)" />
+    </div>
+    <div style="margin-top:12px;padding:14px;background:var(--bg3);border-radius:10px;font-family:var(--font-mono);font-size:12px;color:var(--text2)">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+        <span>Price per ticket</span>
+        <span id="modalPrice" style="color:var(--accent)">1 XLM</span>
+      </div>
+      <div style="display:flex;justify-content:space-between">
+        <span>Network</span>
+        <span style="color:var(--accent3)">Stellar Testnet</span>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="confirmBook()">Confirm Booking</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── HOME ── -->
+<section id="home" class="active">
+  <div class="container">
+    <div class="hero">
+      <div class="hero-left">
+        <div class="hero-eyebrow">Powered by Stellar Soroban</div>
+        <h1>
+          Tickets <span class="dim">on</span><br/>
+          the <span class="accent">Chain.</span>
+        </h1>
+        <p class="hero-desc">
+          Trustless event ticketing built on Stellar. No intermediaries, no fake tickets, no hidden fees — every seat is a verifiable on-chain asset.
+        </p>
+        <div class="hero-actions">
+          <button class="btn btn-primary" onclick="showSection('events')">Browse Events</button>
+          <button class="btn btn-secondary" onclick="showSection('create')">Create Event</button>
+        </div>
+
+        <div class="stats-strip">
+          <div class="stat">
+            <div class="stat-val" id="statEvents">0</div>
+            <div class="stat-label">Events Created</div>
+          </div>
+          <div class="stat">
+            <div class="stat-val" id="statTickets">0</div>
+            <div class="stat-label">Tickets Issued</div>
+          </div>
+          <div class="stat">
+            <div class="stat-val">testnet</div>
+            <div class="stat-label">Network</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-visual">
+        <div class="ticket-card">
+          <div class="ticket-card-header">
+            <div class="ticket-badge">SEAT #001</div>
+            <div class="ticket-event-name">Stellar Summit 2025</div>
+            <div class="ticket-venue">📍 San Francisco, CA</div>
+          </div>
+          <div class="ticket-card-body">
+            <div class="ticket-info-item">
+              <div class="ticket-info-label">Date</div>
+              <div class="ticket-info-val">Dec 12, 2025</div>
+            </div>
+            <div class="ticket-info-item">
+              <div class="ticket-info-label">Price</div>
+              <div class="ticket-info-val" style="color:var(--accent)">1 XLM</div>
+            </div>
+            <div class="ticket-info-item">
+              <div class="ticket-info-label">Status</div>
+              <div class="ticket-info-val"><span class="chip chip-active">Active</span></div>
+            </div>
+          </div>
+          <div class="ticket-card-footer">
+            <div class="ticket-id">TKT-0001 · GAXYZ...3F9K</div>
+            <div class="ticket-qr" id="qrDisplay"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── EVENTS ── -->
+<section id="events">
+  <div class="container">
+    <div class="contract-bar">
+      <span class="contract-bar-label">Contract</span>
+      <span class="contract-bar-id" id="contractIdDisplay">CXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX</span>
+      <span class="contract-bar-net">Testnet</span>
+    </div>
+
+    <div class="page-header">
+      <div class="page-eyebrow">On-chain events</div>
+      <div class="page-title">Browse Events</div>
+      <div class="page-subtitle">All events are stored immutably on Stellar Testnet</div>
+    </div>
+
+    <div class="events-grid" id="eventsGrid">
+      <!-- populated by JS -->
+    </div>
+  </div>
+</section>
+
+<!-- ── CREATE ── -->
+<section id="create">
+  <div class="container">
+    <div class="page-header">
+      <div class="page-eyebrow">Organizer Panel</div>
+      <div class="page-title">Create Event</div>
+      <div class="page-subtitle">Deploy a new event to Stellar Testnet</div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-grid">
+        <div class="field full">
+          <label>Organizer Wallet Address</label>
+          <input type="text" id="organizerAddr" placeholder="G... Stellar address" />
+        </div>
+        <div class="field full">
+          <label>Event Name</label>
+          <input type="text" id="eventName" placeholder="e.g. Stellar Summit 2025" />
+        </div>
+        <div class="field full">
+          <label>Venue</label>
+          <input type="text" id="eventVenue" placeholder="e.g. San Francisco, CA" />
+        </div>
+        <div class="field">
+          <label>Event Date</label>
+          <input type="datetime-local" id="eventDate" />
+        </div>
+        <div class="field">
+          <label>Total Seats</label>
+          <input type="number" id="eventSeats" placeholder="500" min="1" />
+        </div>
+        <div class="field">
+          <label>Price (XLM)</label>
+          <input type="number" id="eventPrice" placeholder="1.0" step="0.1" min="0.1" />
+          <span class="field-hint">1 XLM = 10,000,000 stroops</span>
+        </div>
+        <div class="field full" style="margin-top:8px">
+          <button class="btn btn-primary" onclick="createEvent()" style="width:100%;justify-content:center;padding:14px">
+            Deploy Event to Stellar Testnet
+          </button>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div style="font-family:var(--font-mono);font-size:12px;color:var(--text3)">
+        <div style="margin-bottom:8px;color:var(--text2)">Generated CLI command:</div>
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;line-height:1.8;word-break:break-all" id="cliPreview">
+          Fill in the fields above to generate the Stellar CLI command.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── MY TICKETS ── -->
+<section id="tickets">
+  <div class="container">
+    <div class="page-header">
+      <div class="page-eyebrow">Wallet</div>
+      <div class="page-title">My Tickets</div>
+      <div class="page-subtitle">Your on-chain ticket holdings</div>
+    </div>
+
+    <div class="field" style="max-width:420px;margin-bottom:24px">
+      <label>Wallet Address</label>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="walletLookup" placeholder="Enter your G... address" style="flex:1"/>
+        <button class="btn btn-secondary btn-sm" onclick="lookupTickets()">Lookup</button>
+      </div>
+    </div>
+
+    <div class="tickets-list" id="ticketsList">
+      <div class="empty">
+        <div class="empty-icon">🎫</div>
+        <div class="empty-title">No tickets yet</div>
+        <div>Enter your wallet address to view your tickets</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── VALIDATE ── -->
+<section id="validate">
+  <div class="container">
+    <div class="page-header">
+      <div class="page-eyebrow">Gate Validation</div>
+      <div class="page-title">Validate Ticket</div>
+      <div class="page-subtitle">Mark a ticket as used at the event gate</div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-grid">
+        <div class="field full">
+          <label>Organizer Wallet Address</label>
+          <input type="text" id="validatorAddr" placeholder="G... organizer address" />
+        </div>
+        <div class="field">
+          <label>Ticket ID</label>
+          <input type="number" id="ticketIdInput" placeholder="e.g. 1" min="1" />
+        </div>
+        <div class="field" style="align-self:end">
+          <button class="btn btn-primary" onclick="validateTicket()" style="width:100%;justify-content:center;padding:13px">
+            Validate Ticket
+          </button>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div style="font-size:13px;color:var(--text2);line-height:1.8">
+        <div style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--text);margin-bottom:10px">How gate validation works</div>
+        The organizer's wallet signs a <code style="font-family:var(--font-mono);font-size:12px;background:var(--bg3);padding:2px 6px;border-radius:4px">use_ticket</code> transaction on Stellar. Once confirmed, the ticket is permanently marked as used on-chain — preventing double entry. The transaction is irreversible and publicly verifiable on Stellar Expert.
+      </div>
+
+      <div style="margin-top:24px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px">
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--text3);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px">CLI Command</div>
+        <div style="font-family:var(--font-mono);font-size:12px;color:var(--text2);line-height:1.8;word-break:break-all" id="validateCliPreview">
+          stellar contract invoke --id &lt;CONTRACT_ID&gt; --source organizer --network testnet -- use_ticket --organizer &lt;ORGANIZER_ADDRESS&gt; --ticket_id &lt;TICKET_ID&gt;
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  // ── State ──────────────────────────────────────────────────────────────────
+  const CONTRACT_ID = 'CXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
+
+  const state = {
+    events: [
+      { id: 1, name: 'Stellar Summit 2025', venue: 'San Francisco, CA', date: 1765670400, totalSeats: 500, availableSeats: 312, price: 10000000, organizer: 'GABC...XYZ1', active: true },
+      { id: 2, name: 'DeFi Day Miami', venue: 'Miami, FL', date: 1768262400, totalSeats: 200, availableSeats: 44, price: 5000000, organizer: 'GDEF...XYZ2', active: true },
+      { id: 3, name: 'BlockchainConf NYC', venue: 'New York, NY', date: 1770940800, totalSeats: 1000, availableSeats: 0, price: 20000000, organizer: 'GHIJ...XYZ3', active: true },
+      { id: 4, name: 'Web3 Builders Pune', venue: 'Pune, India', date: 1773619200, totalSeats: 300, availableSeats: 288, price: 2000000, organizer: 'GKLM...XYZ4', active: true },
+    ],
+    tickets: [
+      { id: 1, eventId: 1, owner: 'GTEST...DEMO', seat: 188, price: 10000000, used: false },
+      { id: 2, eventId: 4, owner: 'GTEST...DEMO', seat: 12, price: 2000000, used: true },
+    ],
+    selectedEvent: null,
+  };
+
+  // ── Nav ────────────────────────────────────────────────────────────────────
+  function showSection(id) {
+    document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    document.getElementById('nav-' + id)?.classList.add('active');
+    if (id === 'events') renderEvents();
+    if (id === 'home') updateStats();
+    window.scrollTo(0, 0);
+  }
+
+  // ── Stats ──────────────────────────────────────────────────────────────────
+  function updateStats() {
+    animateCount('statEvents', state.events.length);
+    animateCount('statTickets', state.tickets.length);
+  }
+
+  function animateCount(id, target) {
+    const el = document.getElementById(id);
+    let current = 0;
+    const step = Math.ceil(target / 20);
+    const timer = setInterval(() => {
+      current = Math.min(current + step, target);
+      el.textContent = current;
+      if (current >= target) clearInterval(timer);
+    }, 40);
+  }
+
+  // ── Events ─────────────────────────────────────────────────────────────────
+  function renderEvents() {
+    const grid = document.getElementById('eventsGrid');
+    document.getElementById('contractIdDisplay').textContent = CONTRACT_ID;
+
+    if (!state.events.length) {
+      grid.innerHTML = `<div class="empty"><div class="empty-icon">📅</div><div class="empty-title">No events yet</div><div>Create the first event on the blockchain</div></div>`;
+      return;
+    }
+
+    grid.innerHTML = state.events.map(ev => {
+      const fillPct = ((ev.totalSeats - ev.availableSeats) / ev.totalSeats * 100).toFixed(0);
+      const xlm = (ev.price / 1e7).toFixed(1);
+      const date = new Date(ev.date * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const soldOut = ev.availableSeats === 0;
+      return `
+        <div class="event-card" onclick="openBookModal(${ev.id})">
+          <div class="event-card-accent"></div>
+          <div class="event-card-body">
+            <div class="event-card-tags">
+              <span class="tag ${soldOut ? 'tag-sold' : 'tag-active'}">${soldOut ? 'Sold Out' : 'Available'}</span>
+              <span class="tag tag-network">Testnet</span>
+            </div>
+            <div class="event-card-name">${ev.name}</div>
+            <div class="event-card-venue">📍 ${ev.venue}</div>
+            <div class="event-card-meta">
+              <div class="meta-item">
+                <div class="meta-label">Date</div>
+                <div class="meta-val">${date}</div>
+              </div>
+              <div class="meta-item">
+                <div class="meta-label">Price</div>
+                <div class="meta-val price">${xlm} XLM</div>
+              </div>
+            </div>
+          </div>
+          <div class="event-card-footer">
+            <div class="seats-bar"><div class="seats-fill" style="width:${fillPct}%"></div></div>
+            <div class="seats-text">${ev.availableSeats} / ${ev.totalSeats} seats left</div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  // ── Book Modal ─────────────────────────────────────────────────────────────
+  function openBookModal(eventId) {
+    const ev = state.events.find(e => e.id === eventId);
+    if (!ev) return;
+    if (ev.availableSeats === 0) { showToast('This event is sold out', 'error'); return; }
+    state.selectedEvent = ev;
+    document.getElementById('modalEventName').textContent = ev.name;
+    document.getElementById('modalEventSub').textContent = `📍 ${ev.venue} · Seat will be auto-assigned`;
+    document.getElementById('modalPrice').textContent = (ev.price / 1e7).toFixed(1) + ' XLM';
+    document.getElementById('bookModal').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('bookModal').classList.remove('open');
+    state.selectedEvent = null;
+  }
+
+  function confirmBook() {
+    const addr = document.getElementById('buyerAddress').value.trim();
+    if (!addr || !addr.startsWith('G') || addr.length < 10) {
+      showToast('Please enter a valid Stellar address (starts with G)', 'error');
+      return;
+    }
+    const ev = state.selectedEvent;
+    if (!ev) return;
+
+    const seat = ev.totalSeats - ev.availableSeats + 1;
+    ev.availableSeats--;
+
+    const newTicket = { id: state.tickets.length + 1, eventId: ev.id, owner: addr, seat, price: ev.price, used: false };
+    state.tickets.push(newTicket);
+
+    closeModal();
+    showToast(`Ticket #${newTicket.id} booked! Seat ${seat} — ${ev.name}`, 'success');
+    renderEvents();
+    updateStats();
+
+    // Show CLI command
+    const cli = `stellar contract invoke --id ${CONTRACT_ID} --source buyer --network testnet -- book_ticket --buyer ${addr} --event_id ${ev.id}`;
+    console.log('CLI:', cli);
+  }
+
+  // ── Create Event ───────────────────────────────────────────────────────────
+  function createEvent() {
+    const org = document.getElementById('organizerAddr').value.trim();
+    const name = document.getElementById('eventName').value.trim();
+    const venue = document.getElementById('eventVenue').value.trim();
+    const date = document.getElementById('eventDate').value;
+    const seats = parseInt(document.getElementById('eventSeats').value);
+    const price = parseFloat(document.getElementById('eventPrice').value);
+
+    if (!org || !name || !venue || !date || !seats || !price) {
+      showToast('Please fill in all fields', 'error'); return;
+    }
+    if (!org.startsWith('G')) { showToast('Organizer address must start with G', 'error'); return; }
+
+    const timestamp = Math.floor(new Date(date).getTime() / 1000);
+    const stroops = Math.floor(price * 1e7);
+
+    const newEvent = {
+      id: state.events.length + 1,
+      name, venue,
+      date: timestamp,
+      totalSeats: seats,
+      availableSeats: seats,
+      price: stroops,
+      organizer: org.slice(0,8) + '...' + org.slice(-4),
+      active: true
+    };
+
+    state.events.push(newEvent);
+    showToast(`Event "${name}" created with ${seats} seats!`, 'success');
+
+    // Clear
+    ['organizerAddr','eventName','eventVenue','eventDate','eventSeats','eventPrice'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('cliPreview').textContent = 'Fill in the fields above to generate the Stellar CLI command.';
+
+    setTimeout(() => showSection('events'), 1200);
+  }
+
+  // ── CLI Preview live update ────────────────────────────────────────────────
+  ['organizerAddr','eventName','eventVenue','eventDate','eventSeats','eventPrice'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', updateCliPreview);
+  });
+
+  function updateCliPreview() {
+    const org = document.getElementById('organizerAddr').value || '<ORGANIZER>';
+    const name = document.getElementById('eventName').value || '<NAME>';
+    const venue = document.getElementById('eventVenue').value || '<VENUE>';
+    const date = document.getElementById('eventDate').value;
+    const seats = document.getElementById('eventSeats').value || '<SEATS>';
+    const price = document.getElementById('eventPrice').value;
+    const ts = date ? Math.floor(new Date(date).getTime() / 1000) : '<TIMESTAMP>';
+    const stroops = price ? Math.floor(parseFloat(price) * 1e7) : '<PRICE_STROOPS>';
+
+    document.getElementById('cliPreview').textContent =
+      `stellar contract invoke --id ${CONTRACT_ID} --source deployer --network testnet -- create_event --organizer ${org} --name "${name}" --venue "${venue}" --date ${ts} --total_seats ${seats} --price_per_ticket ${stroops}`;
+  }
+
+  // ── Validate live update ───────────────────────────────────────────────────
+  ['validatorAddr','ticketIdInput'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', updateValidateCli);
+  });
+
+  function updateValidateCli() {
+    const org = document.getElementById('validatorAddr').value || '<ORGANIZER_ADDRESS>';
+    const tid = document.getElementById('ticketIdInput').value || '<TICKET_ID>';
+    document.getElementById('validateCliPreview').textContent =
+      `stellar contract invoke --id ${CONTRACT_ID} --source organizer --network testnet -- use_ticket --organizer ${org} --ticket_id ${tid}`;
+  }
+
+  // ── My Tickets ─────────────────────────────────────────────────────────────
+  function lookupTickets() {
+    const addr = document.getElementById('walletLookup').value.trim();
+    if (!addr) { showToast('Enter a wallet address', 'error'); return; }
+
+    const myTickets = state.tickets.filter(t => t.owner.toLowerCase().includes(addr.toLowerCase()) || addr.toLowerCase().includes('demo'));
+    const list = document.getElementById('ticketsList');
+
+    if (!myTickets.length) {
+      list.innerHTML = `<div class="empty"><div class="empty-icon">🎫</div><div class="empty-title">No tickets found</div><div>No tickets found for this address</div></div>`;
+      return;
+    }
+
+    list.innerHTML = myTickets.map(t => {
+      const ev = state.events.find(e => e.id === t.eventId) || { name: 'Unknown Event', venue: '—' };
+      const xlm = (t.price / 1e7).toFixed(1);
+      return `
+        <div class="my-ticket">
+          <div class="my-ticket-stripe"></div>
+          <div class="my-ticket-body">
+            <div class="my-ticket-event">${ev.name}</div>
+            <div class="my-ticket-meta">
+              <span>Ticket #${t.id}</span>
+              <span>Seat ${t.seat}</span>
+              <span>${xlm} XLM</span>
+              <span><span class="chip ${t.used ? 'chip-used' : 'chip-active'}">${t.used ? 'Used' : 'Valid'}</span></span>
+            </div>
+          </div>
+          <div class="my-ticket-actions">
+            ${!t.used ? `<button class="btn btn-secondary btn-sm" onclick="transferTicket(${t.id})">Transfer</button>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function transferTicket(ticketId) {
+    const newOwner = prompt('Enter new owner Stellar address (G...):');
+    if (!newOwner || !newOwner.startsWith('G')) { showToast('Invalid address', 'error'); return; }
+    const t = state.tickets.find(t => t.id === ticketId);
+    if (t) { t.owner = newOwner; showToast(`Ticket #${ticketId} transferred!`, 'success'); lookupTickets(); }
+  }
+
+  // ── Validate ───────────────────────────────────────────────────────────────
+  function validateTicket() {
+    const org = document.getElementById('validatorAddr').value.trim();
+    const tid = parseInt(document.getElementById('ticketIdInput').value);
+
+    if (!org || !org.startsWith('G')) { showToast('Enter a valid organizer address', 'error'); return; }
+    if (!tid) { showToast('Enter a valid ticket ID', 'error'); return; }
+
+    const ticket = state.tickets.find(t => t.id === tid);
+    if (!ticket) { showToast(`Ticket #${tid} not found`, 'error'); return; }
+    if (ticket.used) { showToast(`Ticket #${tid} is already used`, 'error'); return; }
+
+    ticket.used = true;
+    showToast(`Ticket #${tid} validated successfully! Entry granted.`, 'success');
+    document.getElementById('validatorAddr').value = '';
+    document.getElementById('ticketIdInput').value = '';
+    updateValidateCli();
+  }
+
+  // ── Toast ──────────────────────────────────────────────────────────────────
+  function showToast(msg, type = 'success') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `<div class="toast-icon">${type === 'success' ? '✓' : '✕'}</div><span>${msg}</span>`;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 3500);
+  }
+
+  // ── QR dots ───────────────────────────────────────────────────────────────
+  function generateQR() {
+    const qr = document.getElementById('qrDisplay');
+    if (!qr) return;
+    const pattern = [1,1,1,0,1,1,0,1,0,0,1,1,1,0,1,0,1,0,1,0,1,1,1,0,1];
+    qr.innerHTML = pattern.map((on, i) =>
+      `<div class="qr-dot" style="opacity:${on ? 1 : 0.05};animation-delay:${i * 30}ms"></div>`
+    ).join('');
+  }
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  updateStats();
+  generateQR();
+  document.getElementById('bookModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+</script>
+</body>
+</html>
